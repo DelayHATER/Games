@@ -3,322 +3,85 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MBTI로 포켓몬 찾기</title>
+  <title>버블버블 스타일 플랫폼 퍼즐 러너</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;600;800&display=swap');
-
-    * {
-      box-sizing: border-box;
-      font-family: 'Jua', 'Noto Sans KR', sans-serif;
-    }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background: radial-gradient(circle at 50% 20%, #fffde6 0%, #ffe999 100%);
-      color: #5b4428;
-      overflow-x: hidden;
-    }
-
-    .poke-shadow {
-      filter: drop-shadow(0 12px 16px rgba(104, 73, 18, 0.18));
-    }
-
-    @keyframes float {
-      0%, 100% { transform: translateY(0px) rotate(0deg); }
-      50% { transform: translateY(-10px) rotate(2deg); }
-    }
-
-    .floating {
-      animation: float 3.5s ease-in-out infinite;
-    }
-
-    @keyframes pulse-glow {
-      0%, 100% { box-shadow: 0 0 15px rgba(255, 215, 0, 0.6); }
-      50% { box-shadow: 0 0 30px rgba(255, 165, 0, 0.9); }
-    }
-
-    .glow-card {
-      animation: pulse-glow 3s infinite;
-    }
-
-    /* Custom scrollbar */
-    ::-webkit-scrollbar {
-      width: 8px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #fff3cc;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #eac056;
-      border-radius: 4px;
+    @import url('https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700;900&display=swap');
+    * { box-sizing: border-box; font-family: 'Jua', 'Noto Sans KR', sans-serif; }
+    body { margin: 0; overflow: hidden; background: #09090b; color: white; user-select: none; }
+    canvas { display: block; width: 100vw; height: 100vh; image-rendering: pixelated; }
+    .control-btn {
+      touch-action: manipulation;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
   </style>
 </head>
+<body class="flex flex-col items-center justify-between h-screen">
 
-<body class="flex flex-col items-center justify-between min-h-screen p-4 sm:p-6">
-
-  <canvas id="bgCanvas" class="fixed inset-0 pointer-events-none z-0"></canvas>
-
-  <button id="fullscreenBtn" class="fixed top-4 right-4 z-50 bg-white/80 hover:bg-white text-amber-900 border-2 border-amber-300 font-bold px-4 py-2 rounded-2xl shadow-lg transition transform hover:scale-105 active:scale-95 text-sm sm:text-base flex items-center gap-2">
-    🔲 전체화면
-  </button>
-
-  <main class="app w-full max-w-2xl mx-auto z-10 my-auto py-8">
-
-    <header class="header text-center mb-8">
-      <div class="ball text-6xl sm:text-7xl mb-2 floating select-none cursor-pointer" id="pokeBallIcon" title="볼을 눌러보세요!">⚡</div>
-      <h1 class="text-4xl sm:text-5xl font-extrabold text-amber-900 tracking-tight drop-shadow-sm">MBTI로 포켓몬 찾기</h1>
-      <p class="subtitle mt-2 text-amber-700 text-base sm:text-lg">나와 가장 소울메이트인 포켓몬은 누구일까?</p>
-    </header>
-
-    <section class="card bg-white/90 backdrop-blur-md border-4 border-amber-300 rounded-3xl p-6 sm:p-10 shadow-2xl relative">
-
-      <!-- MBTI 선택 화면 -->
-      <div id="selection" class="transition-all duration-300">
-        <div class="question text-center mb-6 text-xl sm:text-2xl font-bold text-amber-800">
-          ✨ 나의 MBTI 유형을 골라보세요! ✨
+  <div id="uiOverlay" class="absolute top-0 left-0 w-full p-4 sm:p-6 flex justify-between items-center pointer-events-none z-20">
+    <div class="flex flex-col gap-2">
+      <div class="text-xl sm:text-2xl font-black tracking-wider text-purple-400 drop-shadow flex items-center gap-2">🫧 버블버블 무한 퍼즐 러너</div>
+      <div class="flex items-center gap-3 flex-wrap">
+        <div class="flex items-center gap-1.5 bg-slate-900/80 px-3 py-1.5 rounded-xl border border-red-500/40">
+          <span class="text-xs text-red-400 font-bold">HP</span>
+          <div class="w-24 sm:w-32 h-3.5 bg-slate-800 rounded-full overflow-hidden border border-red-500/30">
+            <div id="hpBarFill" class="h-full bg-red-500 transition-all duration-200" style="width: 100%;"></div>
+          </div>
+          <span id="hpText" class="text-xs text-red-300 font-bold ml-1">100/100</span>
         </div>
-
-        <div class="mbti-grid grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-          <!-- 각 MBTI 버튼 -->
-          <button class="mbti-btn border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-400 text-amber-900 rounded-2xl py-4 text-lg font-extrabold transition transform hover:-translate-y-1 shadow-sm active:scale-95" data-type="ISTJ">ISTJ</button>
-          <button class="mbti-btn border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-400 text-amber-900 rounded-2xl py-4 text-lg font-extrabold transition transform hover:-translate-y-1 shadow-sm active:scale-95" data-type="ISFJ">ISFJ</button>
-          <button class="mbti-btn border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-400 text-amber-900 rounded-2xl py-4 text-lg font-extrabold transition transform hover:-translate-y-1 shadow-sm active:scale-95" data-type="INFJ">INFJ</button>
-          <button class="mbti-btn border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-400 text-amber-900 rounded-2xl py-4 text-lg font-extrabold transition transform hover:-translate-y-1 shadow-sm active:scale-95" data-type="INTJ">INTJ</button>
-
-          <button class="mbti-btn border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-400 text-amber-900 rounded-2xl py-4 text-lg font-extrabold transition transform hover:-translate-y-1 shadow-sm active:scale-95" data-type="ISTP">ISTP</button>
-          <button class="mbti-btn border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-400 text-amber-900 rounded-2xl py-4 text-lg font-extrabold transition transform hover:-translate-y-1 shadow-sm active:scale-95" data-type="ISFP">ISFP</button>
-          <button class="mbti-btn border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-400 text-amber-900 rounded-2xl py-4 text-lg font-extrabold transition transform hover:-translate-y-1 shadow-sm active:scale-95" data-type="INFP">INFP</button>
-          <button class="mbti-btn border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-400 text-amber-900 rounded-2xl py-4 text-lg font-extrabold transition transform hover:-translate-y-1 shadow-sm active:scale-95" data-type="INTP">INTP</button>
-
-          <button class="mbti-btn border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-400 text-amber-900 rounded-2xl py-4 text-lg font-extrabold transition transform hover:-translate-y-1 shadow-sm active:scale-95" data-type="ESTP">ESTP</button>
-          <button class="mbti-btn border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-400 text-amber-900 rounded-2xl py-4 text-lg font-extrabold transition transform hover:-translate-y-1 shadow-sm active:scale-95" data-type="ESFP">ESFP</button>
-          <button class="mbti-btn border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-400 text-amber-900 rounded-2xl py-4 text-lg font-extrabold transition transform hover:-translate-y-1 shadow-sm active:scale-95" data-type="ENFP">ENFP</button>
-          <button class="mbti-btn border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-400 text-amber-900 rounded-2xl py-4 text-lg font-extrabold transition transform hover:-translate-y-1 shadow-sm active:scale-95" data-type="ENTP">ENTP</button>
-
-          <button class="mbti-btn border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-400 text-amber-900 rounded-2xl py-4 text-lg font-extrabold transition transform hover:-translate-y-1 shadow-sm active:scale-95" data-type="ESTJ">ESTJ</button>
-          <button class="mbti-btn border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-400 text-amber-900 rounded-2xl py-4 text-lg font-extrabold transition transform hover:-translate-y-1 shadow-sm active:scale-95" data-type="ESFJ">ESFJ</button>
-          <button class="mbti-btn border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-400 text-amber-900 rounded-2xl py-4 text-lg font-extrabold transition transform hover:-translate-y-1 shadow-sm active:scale-95" data-type="ENFJ">ENFJ</button>
-          <button class="mbti-btn border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-400 text-amber-900 rounded-2xl py-4 text-lg font-extrabold transition transform hover:-translate-y-1 shadow-sm active:scale-95" data-type="ENTJ">ENTJ</button>
+        <div class="flex items-center gap-1.5 bg-slate-900/80 px-3 py-1.5 rounded-xl border border-cyan-500/40">
+          <span class="text-xs text-cyan-400 font-bold">대쉬 쿨타임</span>
+          <div class="w-20 sm:w-24 h-3.5 bg-slate-800 rounded-full overflow-hidden border border-cyan-500/30">
+            <div id="dashBarFill" class="h-full bg-cyan-400 transition-all duration-100" style="width: 100%;"></div>
+          </div>
         </div>
       </div>
-
-      <!-- 결과 화면 -->
-      <div id="result" class="result hidden text-center animate-fade-in">
-        <div id="resultMbti" class="inline-block px-4 py-1.5 rounded-full bg-amber-200 text-amber-900 font-extrabold text-sm mb-4 shadow-sm"></div>
-
-        <div id="pokemonEmoji" class="pokemon-emoji text-8xl sm:text-9xl my-4 floating poke-shadow select-none"></div>
-
-        <h2 id="pokemonName" class="pokemon-name text-3xl sm:text-4xl font-extrabold text-amber-900 tracking-tight"></h2>
-
-        <p id="reason" class="reason max-w-lg mx-auto my-4 text-amber-800 text-base sm:text-lg leading-relaxed"></p>
-
-        <div class="compatibility max-w-lg mx-auto my-6 p-4 rounded-2xl bg-amber-50 border-2 border-amber-200 shadow-inner">
-          <div class="compatibility-label text-xs sm:text-sm text-amber-700 font-bold mb-1">✨ 최고의 궁합 MBTI</div>
-          <div id="compatibilityType" class="compatibility-type text-xl sm:text-2xl font-black text-amber-900"></div>
-        </div>
-
-        <div class="flex flex-wrap gap-3 justify-center mt-6">
-          <button id="shareBtn" class="bg-amber-500 hover:bg-amber-600 text-white font-extrabold px-6 py-3 rounded-2xl shadow-lg transition transform hover:-translate-y-0.5 active:scale-95 flex items-center gap-2">
-            📋 결과 복사하기
-          </button>
-          <button id="resetBtn" class="bg-amber-700 hover:bg-amber-800 text-white font-extrabold px-6 py-3 rounded-2xl shadow-lg transition transform hover:-translate-y-0.5 active:scale-95">
-            ↩ 다시 고르기
-          </button>
-        </div>
-      </div>
-
-    </section>
-
-    <!-- 알림 메시지 박스 -->
-    <div id="toast" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-neutral-900 text-white px-6 py-3 rounded-2xl shadow-2xl opacity-0 pointer-events-none transition-all duration-300 z-50 text-sm font-bold">
-      클립보드에 복사되었습니다! 🎉
+      <div id="scoreDisplay" class="text-sm sm:text-base text-amber-200 font-bold">점수: 0점 | 젤리: 0개 | 무한 질주 중</div>
+      <div id="distanceDisplay" class="text-xs text-red-400 font-bold">블랙홀과의 거리: 안전함</div>
     </div>
+    <div class="flex items-center gap-4 pointer-events-auto">
+      <button id="pauseBtn" class="bg-purple-600/90 hover:bg-purple-500 border-2 border-purple-400 px-4 py-2 rounded-xl font-bold transition shadow-lg text-white text-sm sm:text-base">일시정지</button>
+    </div>
+  </div>
 
-    <footer class="footer text-center mt-6 text-amber-800/80 text-sm font-semibold">
-      재미로 즐기는 MBTI × 포켓몬 테스트예요! 💖
-    </footer>
+  <div id="gameOverScreen" class="absolute inset-0 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center z-30 hidden p-4 text-center">
+    <div class="text-5xl sm:text-6xl font-black text-red-500 mb-2 drop-shadow-[0_0_20px_rgba(239,68,68,0.7)] animate-bounce">게임 오버! 🕳️</div>
+    <p id="finalScore" class="text-lg sm:text-xl text-amber-200 mb-2">최종 점수: 0점</p>
+    <p id="finalDistance" class="text-base sm:text-lg text-slate-300 mb-6">획득한 젤리: 0개</p>
+    <button id="restartBtn" class="bg-purple-500 hover:bg-purple-400 text-slate-950 font-black px-8 py-4 rounded-2xl text-xl shadow-xl transition transform hover:scale-105 active:scale-95">다시 도전하기</button>
+  </div>
 
-  </main>
+  <div id="startScreen" class="absolute inset-0 bg-gradient-to-b from-indigo-950 via-purple-950 to-slate-950 backdrop-blur-md flex flex-col items-center justify-center z-30 text-center p-6">
+    <div class="text-6xl sm:text-7xl mb-4 animate-bounce">🦖🫧⚡</div>
+    <h1 class="text-3xl sm:text-5xl font-black mb-3 text-purple-300 drop-shadow">버블버블 무한 퍼즐 러너</h1>
+    <p class="text-slate-200 max-w-lg mb-8 text-sm sm:text-lg leading-relaxed">
+      <b>[A / D 또는 하단 좌우 이동버튼]</b>: 좌우 이동<br>
+      <b>[W / 스페이스바 / 점프버튼]</b>: 점프<br>
+      <b>[Shift / J 또는 대쉬버튼]</b>: 순간 대쉬 (무적 돌진!)<br>
+      날아오는 장애물과 바닥 함정을 피해 무한 스테이지를 질주하세요!
+    </p>
+    <button id="startBtn" class="bg-purple-500 hover:bg-purple-400 text-white font-black px-10 py-5 rounded-2xl text-2xl shadow-2xl transition transform hover:scale-105 active:scale-95 animate-pulse">모험 시작하기!</button>
+  </div>
+
+  <div id="mobileControls" class="absolute bottom-4 left-4 right-4 flex justify-between items-center pointer-events-auto z-20 md:hidden">
+    <div class="flex gap-2">
+      <button id="leftBtn" class="control-btn bg-purple-600/80 active:bg-purple-400 text-white font-black px-6 py-5 rounded-2xl text-xl shadow-lg border-2 border-purple-300">⬅️</button>
+      <button id="rightBtn" class="control-btn bg-purple-600/80 active:bg-purple-400 text-white font-black px-6 py-5 rounded-2xl text-xl shadow-lg border-2 border-purple-300">➡️</button>
+    </div>
+    <div class="flex gap-2">
+      <button id="dashMobBtn" class="control-btn bg-cyan-600/80 active:bg-cyan-400 text-white font-black px-5 py-5 rounded-2xl text-lg shadow-lg border-2 border-cyan-300">⚡ 대쉬</button>
+      <button id="jumpBtn" class="control-btn bg-indigo-600/80 active:bg-indigo-400 text-white font-black px-6 py-5 rounded-2xl text-lg shadow-lg border-2 border-indigo-300">⬆️ 점프</button>
+    </div>
+  </div>
+
+  <canvas id="gameCanvas"></canvas>
 
   <script>
-    // 포켓몬 데이터베이스
-    const pokemonData = {
-      ISTJ: {
-        name: "메타그로스",
-        emoji: "🤖",
-        reason: "차분하고 책임감이 강한 ISTJ에게는 냉철하고 체계적인 메타그로스가 잘 어울려요.<br>복잡한 문제도 논리적으로 하나씩 해결하는 모습이 닮았답니다.",
-        compatible: "ESFP"
-      },
-      ISFJ: {
-        name: "해피너스",
-        emoji: "🥚",
-        reason: "다른 사람을 세심하게 챙기는 ISFJ에게 따뜻한 해피너스는 찰떡이에요.<br>든든하게 곁을 지켜주면서 주변에 행복을 나눠주는 모습이 닮았어요.",
-        compatible: "ESTP"
-      },
-      INFJ: {
-        name: "가디안",
-        emoji: "🧚",
-        reason: "깊은 생각과 따뜻한 마음을 가진 INFJ에게 가디안이 잘 어울려요.<br>소중한 사람을 위해 용기를 내는 헌신적인 모습이 INFJ와 닮았답니다.",
-        compatible: "ENFP"
-      },
-      INTJ: {
-        name: "뮤츠",
-        emoji: "🧬",
-        reason: "전략을 세우고 깊이 생각하는 INTJ에게 강력하고 지적인 뮤츠가 어울려요.<br>혼자서도 목표를 향해 꾸준히 나아가는 모습이 멋진 조합이에요.",
-        compatible: "ENFP"
-      },
-      ISTP: {
-        name: "루카리오",
-        emoji: "🥋",
-        reason: "실용적이고 침착한 ISTP에게는 행동으로 보여주는 루카리오가 잘 맞아요.<br>상황을 빠르게 파악하고 필요한 순간 정확하게 움직이는 타입이에요.",
-        compatible: "ESFJ"
-      },
-      ISFP: {
-        name: "이브이",
-        emoji: "🦊",
-        reason: "자유롭고 감각적인 ISFP에게 귀엽고 다채로운 매력의 이브이가 잘 어울려요.<br>정해진 틀보다 자신만의 방식으로 성장하는 모습이 닮았답니다.",
-        compatible: "ENFJ"
-      },
-      INFP: {
-        name: "세레비",
-        emoji: "🌿",
-        reason: "상상력이 풍부하고 마음이 따뜻한 INFP에게 신비로운 세레비가 잘 어울려요.<br>평화와 아름다움을 소중하게 생각하는 모습이 INFP의 감성과 닮았어요.",
-        compatible: "ENFJ"
-      },
-      INTP: {
-        name: "프리져",
-        emoji: "❄️",
-        reason: "호기심 많고 독창적인 INTP에게 신비롭고 차분한 프리져가 어울려요.<br>혼자 생각할 시간을 즐기면서 자신만의 세계를 만들어가는 타입이에요.",
-        compatible: "ENTJ"
-      },
-      ESTP: {
-        name: "리자몽",
-        emoji: "🔥",
-        reason: "대담하고 행동력이 뛰어난 ESTP에게 강렬한 리자몽이 딱이에요.<br>새로운 상황을 두려워하지 않고 직접 부딪히는 에너지가 닮았답니다.",
-        compatible: "ISFJ"
-      },
-      ESFP: {
-        name: "피카츄",
-        emoji: "⚡",
-        reason: "밝고 사람들과 어울리는 것을 좋아하는 ESFP에게 피카츄만큼 잘 맞는 포켓몬은 없죠!<br>주변에 활기를 불어넣고 즐거운 순간을 만드는 매력이 닮았어요.",
-        compatible: "ISTJ"
-      },
-      ENFP: {
-        name: "토게피",
-        emoji: "🐣",
-        reason: "호기심 많고 긍정적인 ENFP에게 사랑스러운 토게피가 잘 어울려요.<br>새로운 가능성을 발견하고 주변 사람에게 좋은 에너지를 전하는 모습이 닮았답니다.",
-        compatible: "INFJ"
-      },
-      ENTP: {
-        name: "팬텀",
-        emoji: "👻",
-        reason: "재치 있고 새로운 아이디어를 좋아하는 ENTP에게 장난꾸러기 팬텀이 어울려요.<br>예상 밖의 행동과 톡톡 튀는 발상으로 분위기를 바꾸는 매력이 닮았어요.",
-        compatible: "INFJ"
-      },
-      ESTJ: {
-        name: "거북왕",
-        emoji: "🐢",
-        reason: "현실적이고 추진력이 강한 ESTJ에게 믿음직한 거북왕이 잘 어울려요.<br>목표를 정하면 꾸준히 밀어붙이고 팀을 든든하게 이끄는 모습이 닮았답니다.",
-        compatible: "ISFP"
-      },
-      ESFJ: {
-        name: "푸린",
-        emoji: "🎤",
-        reason: "사람을 좋아하고 분위기를 따뜻하게 만드는 ESFJ에게 푸린이 잘 어울려요.<br>주변 사람들과 함께 즐거움을 나누고 싶은 마음이 닮았어요.",
-        compatible: "ISTP"
-      },
-      ENFJ: {
-        name: "라프라스",
-        emoji: "🌊",
-        reason: "사람을 이끌면서도 따뜻하게 챙기는 ENFJ에게 라프라스가 잘 어울려요.<br>다른 사람을 도와주고 함께 앞으로 나아가려는 다정한 모습이 닮았답니다.",
-        compatible: "INFP"
-      },
-      ENTJ: {
-        name: "망나뇽",
-        emoji: "🐉",
-        reason: "목표 지향적이고 자신감 있는 ENTJ에게 강력하면서도 믿음직한 망나뇽이 어울려요.<br>큰 목표를 향해 거침없이 나아가면서도 동료를 지켜주는 모습이 멋진 조합이에요.",
-        compatible: "INTP"
-      }
-    };
-
-    // 사운드 이펙트 설정 (Tone.js)
-    let synth = null;
-    function initSound() {
-      if (!synth) {
-        synth = new Tone.Synth({
-          oscillator: { type: "triangle" },
-          envelope: { attack: 0.005, decay: 0.1, sustain: 0.1, release: 0.5 }
-        }).toDestination();
-      }
-    }
-
-    function playPopSound() {
-      try {
-        initSound();
-        Tone.start();
-        synth.triggerAttackRelease("C5", "8n");
-      } catch (e) {
-        // audio context blocked or unsupported
-      }
-    }
-
-    function playSuccessSound() {
-      try {
-        initSound();
-        Tone.start();
-        const now = Tone.now();
-        synth.triggerAttackRelease("G4", "8n", now);
-        synth.triggerAttackRelease("C5", "8n", now + 0.1);
-        synth.triggerAttackRelease("E5", "4n", now + 0.2);
-      } catch (e) {}
-    }
-
-    // DOM 요소
-    const selection = document.getElementById("selection");
-    const result = document.getElementById("result");
-    const resultMbti = document.getElementById("resultMbti");
-    const pokemonEmoji = document.getElementById("pokemonEmoji");
-    const pokemonName = document.getElementById("pokemonName");
-    const reason = document.getElementById("reason");
-    const compatibilityType = document.getElementById("compatibilityType");
-    const resetBtn = document.getElementById("resetBtn");
-    const shareBtn = document.getElementById("shareBtn");
-    const toast = document.getElementById("toast");
-    const pokeBallIcon = document.getElementById("pokeBallIcon");
-    const fullscreenBtn = document.getElementById("fullscreenBtn");
-
-    // 전체화면 토글 기능
-    fullscreenBtn.addEventListener("click", () => {
-      playPopSound();
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch((err) => {
-          showToast("전체화면을 지원하지 않는 브라우저입니다 😢");
-        });
-        fullscreenBtn.textContent = "🔳 창모드";
-      } else {
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
-        }
-        fullscreenBtn.textContent = "🔲 전체화면";
-      }
-    });
-
-    document.addEventListener("fullscreenchange", () => {
-      if (!document.fullscreenElement) {
-        fullscreenBtn.textContent = "🔲 전체화면";
-      } else {
-        fullscreenBtn.textContent = "🔳 창모드";
-      }
-    });
-
-    // 배경 파티클 애니메이션
-    const canvas = document.getElementById("bgCanvas");
+    const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
-    let particles = [];
 
     function resizeCanvas() {
       canvas.width = window.innerWidth;
@@ -327,126 +90,517 @@
     window.addEventListener("resize", resizeCanvas);
     resizeCanvas();
 
-    for (let i = 0; i < 25; i++) {
-      particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        size: Math.random() * 6 + 3,
-        speedY: Math.random() * 0.5 - 0.25,
-        speedX: Math.random() * 0.5 - 0.25,
-        color: ['#ffeb3b', '#ffc107', '#ff9800', '#fff'][Math.floor(Math.random() * 4)],
-        alpha: Math.random() * 0.6 + 0.2
-      });
-    }
+    let gameState = "START";
+    let score = 0;
+    let jelliesCollected = 0;
+    let cameraX = 0;
+    let maxGeneratedX = 0;
 
-    function animateParticles() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      particles.forEach(p => {
-        ctx.fillStyle = p.color;
-        ctx.globalAlpha = p.alpha;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
+    let player = {
+      x: 200,
+      y: 400,
+      width: 40,
+      height: 48,
+      vx: 0,
+      vy: 0,
+      baseSpeed: 5.5,
+      speed: 5.5,
+      jumpForce: 13,
+      gravity: 0.55,
+      isGrounded: false,
+      facing: 1,
+      hp: 100,
+      maxHp: 100,
+      isDashing: false,
+      dashCooldown: 0,
+      dashTimer: 0,
+      slowTimer: 0
+    };
 
-        p.x += p.speedX;
-        p.y += p.speedY;
+    let blackHole = {
+      x: -400,
+      y: canvas.height / 2,
+      radius: 120,
+      speed: 4.2, // 블랙홀 기본 속도 상향
+      gravityPullDistance: 650, // 중력 영향 범위 확대
+      maxPullForce: 9.5 // 빨아당기는 힘 강화
+    };
 
-        if (p.x < 0) p.x = canvas.width;
-        if (p.x > canvas.width) p.x = 0;
-        if (p.y < 0) p.y = canvas.height;
-        if (p.y > canvas.height) p.y = 0;
-      });
-      requestAnimationFrame(animateParticles);
-    }
-    animateParticles();
+    let platforms = [];
+    let jellies = [];
+    let obstacles = [];
+    let flyingProjectiles = [];
 
-    // 토스트 메시지 함수
-    function showToast(msg) {
-      toast.textContent = msg;
-      toast.classList.remove("opacity-0");
-      toast.classList.add("opacity-100");
-      setTimeout(() => {
-        toast.classList.remove("opacity-100");
-        toast.classList.add("opacity-0");
-      }, 2000);
-    }
+    let keys = { left: false, right: false, jump: false, dash: false };
 
-    // 볼 아이콘 클릭 인터랙션
-    pokeBallIcon.addEventListener("click", () => {
-      playSuccessSound();
-      showToast("삐비빅! 포켓몬 볼이 반응합니다! ⚡");
-    });
-
-    let currentSelectedType = "";
-
-    // MBTI 버튼 클릭 이벤트
-    document.querySelectorAll(".mbti-btn").forEach(button => {
-      button.addEventListener("click", () => {
-        playSuccessSound();
-        const type = button.dataset.type;
-        currentSelectedType = type;
-        const data = pokemonData[type];
-
-        resultMbti.textContent = type + " 유형";
-        pokemonEmoji.textContent = data.emoji;
-        pokemonName.textContent = data.name;
-        reason.innerHTML = data.reason;
-        compatibilityType.textContent = data.compatible;
-
-        selection.style.opacity = "0";
-        setTimeout(() => {
-          selection.style.display = "none";
-          result.style.display = "block";
-          result.classList.remove("hidden");
-        }, 150);
-      });
-    });
-
-    // 공유하기 버튼
-    shareBtn.addEventListener("click", () => {
-      playPopSound();
-      const data = pokemonData[currentSelectedType];
-      const shareText = `[MBTI 포켓몬 테스트] 나의 MBTI(${currentSelectedType}) 소울메이트 포켓몬은 '${data.name}'(${data.emoji})입니다! ✨`;
-      
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(shareText).then(() => {
-          showToast("결과가 클립보드에 복사되었습니다! 📋");
-        }).catch(() => {
-          fallbackCopyText(shareText);
-        });
-      } else {
-        fallbackCopyText(shareText);
+    let synth = null;
+    function initAudio() {
+      if (!synth) {
+        synth = new Tone.Synth({
+          oscillator: { type: "triangle" },
+          envelope: { attack: 0.005, decay: 0.1, sustain: 0.1, release: 0.3 }
+        }).toDestination();
       }
-    });
+    }
 
-    function fallbackCopyText(text) {
-      const textarea = document.createElement("textarea");
-      textarea.value = text;
-      document.body.appendChild(textarea);
-      textarea.select();
+    function playSound(note = "C5", duration = "8n") {
       try {
-        document.execCommand('copy');
-        showToast("결과가 클립보드에 복사되었습니다! 📋");
-      } catch (e) {
-        showToast("복사 실패 😢");
-      }
-      document.body.removeChild(textarea);
+        initAudio();
+        Tone.start();
+        synth.triggerAttackRelease(note, duration);
+      } catch (e) {}
     }
 
-    // 다시 고르기 버튼
-    resetBtn.addEventListener("click", () => {
-      playPopSound();
-      result.style.display = "none";
-      result.classList.add("hidden");
-      selection.style.display = "block";
-      setTimeout(() => {
-        selection.style.opacity = "1";
-      }, 50);
-      window.scrollTo({
-        top: 0,
-        behavior: "smooth"
-      });
+    function resetGame() {
+      player.x = 150;
+      player.y = canvas.height - 250;
+      player.vx = 0;
+      player.vy = 0;
+      player.hp = 100;
+      player.dashCooldown = 0;
+      player.dashTimer = 0;
+      player.slowTimer = 0;
+      score = 0;
+      jelliesCollected = 0;
+      cameraX = 0;
+      blackHole.x = -450;
+      blackHole.y = canvas.height / 2;
+      maxGeneratedX = 0;
+
+      platforms = [];
+      jellies = [];
+      obstacles = [];
+      flyingProjectiles = [];
+
+      generateWorldChunk(0, 4000);
+      maxGeneratedX = 4000;
+    }
+
+    function generateWorldChunk(startX, endX) {
+      let currentX = startX;
+      let currentY = canvas.height - 150;
+
+      if (currentX === 0) {
+        platforms.push({ x: 0, y: canvas.height - 120, width: 1000, height: 40 });
+        currentX = 1000;
+      }
+
+      while (currentX < endX) {
+        let pWidth = Math.random() * 180 + 160;
+        let pHeight = 28;
+        
+        let heightDelta = (Math.random() - 0.45) * 200; 
+        currentY += heightDelta;
+        
+        if (currentY > canvas.height - 150) currentY = canvas.height - 150;
+        if (currentY < 180) currentY = 180;
+
+        let pX = currentX + Math.random() * 80 + 30;
+
+        platforms.push({ x: pX, y: currentY, width: pWidth, height: pHeight });
+
+        if (Math.random() > 0.15) {
+          jellies.push({ x: pX + pWidth / 2, y: currentY - 35, collected: false, radius: 14 });
+        }
+
+        if (Math.random() > 0.55 && pWidth > 200) {
+          obstacles.push({ x: pX + pWidth / 3, y: currentY - 30, width: 30, height: 30 });
+        }
+
+        currentX = pX + pWidth;
+      }
+    }
+
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "ArrowLeft" || e.code === "KeyA") keys.left = true;
+      if (e.code === "ArrowRight" || e.code === "KeyD") keys.right = true;
+      if (e.code === "ArrowUp" || e.code === "KeyW" || e.code === "Space") {
+        e.preventDefault();
+        if (player.isGrounded && gameState === "PLAYING") {
+          player.vy = -player.jumpForce;
+          player.isGrounded = false;
+          playSound("E5", "8n");
+        }
+      }
+      if ((e.code === "ShiftLeft" || e.code === "ShiftRight" || e.code === "KeyJ") && gameState === "PLAYING") {
+        triggerDash();
+      }
     });
+
+    window.addEventListener("keyup", (e) => {
+      if (e.code === "ArrowLeft" || e.code === "KeyA") keys.left = false;
+      if (e.code === "ArrowRight" || e.code === "KeyD") keys.right = false;
+    });
+
+    function triggerDash() {
+      if (player.dashCooldown <= 0 && !player.isDashing) {
+        player.isDashing = true;
+        player.dashTimer = 18;
+        player.dashCooldown = 120;
+        playSound("A5", "8n");
+      }
+    }
+
+    const leftBtn = document.getElementById("leftBtn");
+    const rightBtn = document.getElementById("rightBtn");
+    const jumpBtn = document.getElementById("jumpBtn");
+    const dashMobBtn = document.getElementById("dashMobBtn");
+
+    leftBtn.addEventListener("pointerdown", (e) => { e.preventDefault(); keys.left = true; });
+    leftBtn.addEventListener("pointerup", (e) => { e.preventDefault(); keys.left = false; });
+    leftBtn.addEventListener("pointerleave", (e) => { e.preventDefault(); keys.left = false; });
+
+    rightBtn.addEventListener("pointerdown", (e) => { e.preventDefault(); keys.right = true; });
+    rightBtn.addEventListener("pointerup", (e) => { e.preventDefault(); keys.right = false; });
+    rightBtn.addEventListener("pointerleave", (e) => { e.preventDefault(); keys.right = false; });
+
+    dashMobBtn.addEventListener("pointerdown", (e) => { e.preventDefault(); triggerDash(); });
+
+    jumpBtn.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      if (player.isGrounded && gameState === "PLAYING") {
+        player.vy = -player.jumpForce;
+        player.isGrounded = false;
+        playSound("E5", "8n");
+      }
+    });
+
+    document.getElementById("startBtn").addEventListener("click", () => {
+      playSound("C5", "4n");
+      resetGame();
+      gameState = "PLAYING";
+      document.getElementById("startScreen").classList.add("hidden");
+    });
+
+    document.getElementById("restartBtn").addEventListener("click", () => {
+      playSound("G5", "4n");
+      resetGame();
+      gameState = "PLAYING";
+      document.getElementById("gameOverScreen").classList.add("hidden");
+    });
+
+    const pauseBtn = document.getElementById("pauseBtn");
+    pauseBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (gameState === "PLAYING") {
+        gameState = "PAUSED";
+        pauseBtn.textContent = "계속하기";
+      } else if (gameState === "PAUSED") {
+        gameState = "PLAYING";
+        pauseBtn.textContent = "일시정지";
+      }
+    });
+
+    function update(dt) {
+      if (gameState !== "PLAYING") return;
+
+      if (player.dashCooldown > 0) player.dashCooldown--;
+      if (player.slowTimer > 0) player.slowTimer--;
+
+      if (player.dashTimer > 0) {
+        player.dashTimer--;
+        if (player.dashTimer === 0) {
+          player.isDashing = false;
+        }
+      }
+
+      let currentSpeed = player.baseSpeed;
+      if (player.isDashing) {
+        currentSpeed = player.baseSpeed * 2.8;
+      } else if (player.slowTimer > 0) {
+        currentSpeed = player.baseSpeed * 0.45;
+      }
+
+      player.vx = 0;
+      if (keys.left) {
+        player.vx = -currentSpeed;
+        player.facing = -1;
+      }
+      if (keys.right) {
+        player.vx = currentSpeed;
+        player.facing = 1;
+      }
+      if (player.isDashing) {
+        player.vx = player.facing * currentSpeed;
+      }
+
+      player.x += player.vx;
+      if (player.x < 0) player.x = 0;
+
+      if (player.x + 3500 > maxGeneratedX) {
+        generateWorldChunk(maxGeneratedX, maxGeneratedX + 3500);
+        maxGeneratedX += 3500;
+      }
+
+      if (!player.isDashing) {
+        player.vy += player.gravity;
+      } else {
+        player.vy = 0;
+      }
+      player.y += player.vy;
+      player.isGrounded = false;
+
+      platforms.forEach(p => {
+        if (
+          player.x + player.width > p.x &&
+          player.x < p.x + p.width &&
+          player.y + player.height >= p.y &&
+          player.y + player.height - player.vy <= p.y + 12 &&
+          player.vy >= 0
+        ) {
+          player.y = p.y - player.height;
+          player.vy = 0;
+          player.isGrounded = true;
+        }
+      });
+
+      if (player.y > canvas.height + 100) {
+        player.hp -= 30;
+        player.y = canvas.height - 250;
+        player.x -= 150;
+        playSound("C3", "4n");
+      }
+
+      if (Math.random() < 0.022) {
+        let missileY = player.y + (Math.random() - 0.5) * 220;
+        flyingProjectiles.push({
+          x: player.x + canvas.width / 2 + 300,
+          y: missileY,
+          vx: -(Math.random() * 3 + 6),
+          width: 32,
+          height: 16
+        });
+      }
+
+      for (let i = flyingProjectiles.length - 1; i >= 0; i--) {
+        let proj = flyingProjectiles[i];
+        proj.x += proj.vx;
+
+        if (
+          !player.isDashing &&
+          player.x < proj.x + proj.width &&
+          player.x + player.width > proj.x &&
+          player.y < proj.y + proj.height &&
+          player.y + player.height > proj.y
+        ) {
+          player.hp -= 15;
+          player.slowTimer = 90;
+          flyingProjectiles.splice(i, 1);
+          playSound("C2", "8n");
+          continue;
+        }
+
+        if (proj.x < cameraX - 200) {
+          flyingProjectiles.splice(i, 1);
+        }
+      }
+
+      // 블랙홀 이동 및 X, Y 좌표 추적
+      blackHole.speed = 3.2 + Math.floor(player.x / 1000) * 0.3;
+      blackHole.x += blackHole.speed;
+      
+      let targetBlackHoleY = player.y + player.height / 2;
+      blackHole.y += (targetBlackHoleY - blackHole.y) * 0.05;
+
+      let dx = player.x - blackHole.x;
+      let dy = (player.y + player.height / 2) - blackHole.y;
+      let distanceToPlayer = Math.sqrt(dx * dx + dy * dy);
+
+      document.getElementById("distanceDisplay").textContent = `블랙홀과의 거리: ${Math.max(0, Math.floor(distanceToPlayer))}m`;
+
+      // 블랙홀 중력: 블랙홀이 왼쪽에 있으므로 플레이어를 왼쪽(블랙홀 방향)으로 당김 (+ 방향으로 X좌표를 당기거나 플레이어 좌표를 블랙홀 쪽으로 깎음)
+      if (distanceToPlayer < blackHole.gravityPullDistance && !player.isDashing) {
+        let pullFactor = 1 - (distanceToPlayer / blackHole.gravityPullDistance);
+        pullFactor = Math.max(0, Math.min(1, pullFactor));
+        pullFactor = pullFactor * pullFactor;
+
+        // 플레이어가 블랙홀보다 오른쪽에 있으므로 X좌표를 왼쪽으로 끌어당김 (- 방향)
+        player.x -= pullFactor * blackHole.maxPullForce;
+        player.y += (blackHole.y - (player.y + player.height / 2)) * pullFactor * 0.1;
+      }
+
+      if (distanceToPlayer <= 60 || player.hp <= 0) {
+        gameState = "GAMEOVER";
+        document.getElementById("finalScore").textContent = `최종 점수: ${Math.floor(player.x)}점`;
+        document.getElementById("finalDistance").textContent = `획득한 젤리: ${jelliesCollected}개`;
+        document.getElementById("gameOverScreen").classList.remove("hidden");
+        playSound("A2", "2n");
+        return;
+      }
+
+      let targetCameraX = player.x - canvas.width / 3;
+      cameraX += (targetCameraX - cameraX) * 0.1;
+      if (cameraX < 0) cameraX = 0;
+
+      jellies.forEach(j => {
+        if (!j.collected) {
+          let jdx = (player.x + player.width / 2) - j.x;
+          let jdy = (player.y + player.height / 2) - j.y;
+          let dist = Math.sqrt(jdx * jdx + jdy * jdy);
+          if (dist < player.width / 2 + j.radius) {
+            j.collected = true;
+            jelliesCollected++;
+            score += 500;
+            if (player.hp < player.maxHp) player.hp = Math.min(player.maxHp, player.hp + 10);
+            playSound("B5", "16n");
+          }
+        }
+      });
+
+      obstacles.forEach(obs => {
+        if (
+          !player.isDashing &&
+          player.x < obs.x + obs.width &&
+          player.x + player.width > obs.x &&
+          player.y < obs.y + obs.height &&
+          player.y + player.height > obs.y
+        ) {
+          player.hp -= 10;
+          player.slowTimer = 90;
+          player.x -= 40;
+          playSound("C3", "8n");
+        }
+      });
+
+      let hpPercent = Math.max(0, (player.hp / player.maxHp) * 100);
+      document.getElementById("hpBarFill").style.width = `${hpPercent}%`;
+      document.getElementById("hpText").textContent = `${Math.max(0, Math.floor(player.hp))}/${player.maxHp}`;
+
+      let dashPercent = Math.max(0, ((120 - player.dashCooldown) / 120) * 100);
+      document.getElementById("dashBarFill").style.width = `${dashPercent}%`;
+
+      document.getElementById("scoreDisplay").textContent = `점수: ${Math.floor(player.x)}점 | 젤리: ${jelliesCollected}개 | 무한 질주 중`;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      ctx.translate(-cameraX, 0);
+
+      let bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      bgGrad.addColorStop(0, "#1e1b4b");
+      bgGrad.addColorStop(0.5, "#311042");
+      bgGrad.addColorStop(1, "#09090b");
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(cameraX, 0, canvas.width, canvas.height);
+
+      platforms.forEach(p => {
+        if (p.x + p.width > cameraX && p.x < cameraX + canvas.width) {
+          ctx.fillStyle = "#7c3aed";
+          ctx.beginPath();
+          ctx.roundRect(p.x, p.y, p.width, p.height, 8);
+          ctx.fill();
+          ctx.strokeStyle = "#c084fc";
+          ctx.lineWidth = 3;
+          ctx.stroke();
+        }
+      });
+
+      jellies.forEach(j => {
+        if (!j.collected && j.x + j.radius > cameraX && j.x - j.radius < cameraX + canvas.width) {
+          ctx.fillStyle = "#facc15";
+          ctx.beginPath();
+          ctx.arc(j.x, j.y, j.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#fef08a";
+          ctx.lineWidth = 3;
+          ctx.stroke();
+
+          ctx.fillStyle = "rgba(255,255,255,0.8)";
+          ctx.beginPath();
+          ctx.arc(j.x - 4, j.y - 4, 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+
+      obstacles.forEach(obs => {
+        if (obs.x + obs.width > cameraX && obs.x < cameraX + canvas.width) {
+          ctx.fillStyle = "#ef4444";
+          ctx.beginPath();
+          ctx.roundRect(obs.x, obs.y, obs.width, obs.height, 6);
+          ctx.fill();
+          ctx.strokeStyle = "#fca5a5";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      });
+
+      flyingProjectiles.forEach(proj => {
+        ctx.fillStyle = "#f97316";
+        ctx.beginPath();
+        ctx.roundRect(proj.x, proj.y, proj.width, proj.height, 4);
+        ctx.fill();
+        ctx.strokeStyle = "#fef08a";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = "#ef4444";
+        ctx.fillRect(proj.x + proj.width, proj.y + 4, 8, 8);
+      });
+
+      // 블랙홀 렌더링
+      ctx.save();
+      ctx.translate(blackHole.x, blackHole.y);
+      
+      let gradient = ctx.createRadialGradient(0, 0, 10, 0, 0, blackHole.radius);
+      gradient.addColorStop(0, "#000000");
+      gradient.addColorStop(0.4, "#4c1d95");
+      gradient.addColorStop(0.8, "#8b5cf6");
+      gradient.addColorStop(1, "transparent");
+      
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(0, 0, blackHole.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = "#e879f9";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(0, 0, blackHole.radius * 0.7, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.save();
+      if (player.isDashing) {
+        ctx.shadowColor = "#38bdf8";
+        ctx.shadowBlur = 25;
+      }
+      if (player.slowTimer > 0) {
+        ctx.fillStyle = "#cbd5e1";
+      } else {
+        ctx.fillStyle = player.isDashing ? "#38bdf8" : "#0ea5e9";
+      }
+
+      ctx.beginPath();
+      ctx.roundRect(player.x, player.y, player.width, player.height, 12);
+      ctx.fill();
+      ctx.strokeStyle = "#bae6fd";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(player.facing > 0 ? player.x + 22 : player.x + 6, player.y + 10, 10, 12);
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(player.facing > 0 ? player.x + 28 : player.x + 10, player.y + 13, 4, 6);
+
+      ctx.restore();
+
+      ctx.restore();
+    }
+
+    let lastTime = performance.now();
+    function gameLoop(time) {
+      let dt = (time - lastTime) / 1000;
+      if (dt > 0.1) dt = 0.1;
+      lastTime = time;
+
+      update(dt);
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    requestAnimationFrame(gameLoop);
   </script>
 </body>
 </html>
